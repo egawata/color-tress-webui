@@ -16,10 +16,8 @@
             .image {
                 text-align: center;
             }
-            canvas {
+            .image img {
                 border: 1px solid black;
-                width: 400px;
-                height: 400px;
             }
         </style>
     </head>
@@ -38,6 +36,8 @@
         <div>
             <button id="fileselect">Select Image</button>
             <button id="generate">Generate</button>
+        </div>
+        <div id="progress">
         </div>
         <input type="file" id="file-input" accept="image/*" style="display: none;">
     </body>
@@ -70,31 +70,6 @@
                 inputImage.style.height = height + 'px';
             };
             reader.readAsDataURL(file);
-        });
-
-        generate.addEventListener('click', function() {
-            /* TODO: implement here
-            const canvas = document.createElement('canvas');
-            canvas.width = 400;
-            canvas.height = 400;
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.src = inputImage.src;
-            img.onload = function() {
-                ctx.drawImage(img, 0, 0, 400, 400);
-                const imageData = ctx.getImageData(0, 0, 400, 400);
-                const data = new Uint8Array(imageData.data);
-                const ptr = module._malloc(data.length);
-                module.HEAPU8.set(data, ptr);
-                const outputPtr = module._generate(ptr, 400, 400);
-                const outputData = new Uint8Array(module.HEAPU8.buffer, outputPtr, 400 * 400 * 4);
-                const outputImageData = new ImageData(new Uint8ClampedArray(outputData), 400, 400);
-                ctx.putImageData(outputImageData, 0, 0);
-                outputImage.src = canvas.toDataURL();
-                module._free(ptr);
-                module._free(outputPtr);
-            };
-            */
         });
     </script>
 </html>
