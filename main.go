@@ -15,6 +15,25 @@ import (
 
 const pxRange = 3
 
+type imgFormat int
+
+const (
+	imgFormatUnknown imgFormat = iota
+	imgFormatJPEG
+	imgFormatPNG
+)
+
+func (f imgFormat) String() string {
+	switch f {
+	case imgFormatJPEG:
+		return "JPEG"
+	case imgFormatPNG:
+		return "PNG"
+	default:
+		return "Unknown"
+	}
+}
+
 type dom struct {
 	btnGenerate js.Value
 	inputImage  js.Value
@@ -36,43 +55,9 @@ func (a *app) Start() {
 }
 
 func (a *app) generate(this js.Value, p []js.Value) interface{} {
-	data := a.el.inputImage.Get("src").String()
-	dArray := strings.Split(data, ",")
-	if len(dArray) != 2 {
-		log.Printf("Invalid data URL: %s", data)
-		return nil
-	}
-	f := dArray[0]
-	var format string
-	if strings.Contains(f, "image/jpeg") {
-		format = "jpeg"
-	} else if strings.Contains(f, "image/png") {
-		format = "png"
-	} else {
-		log.Printf("Unsupported format: %s", format)
-		return nil
-	}
-	encoded := dArray[1]
-	log.Printf("encoded: %s", encoded)
-
-	imgData, err := base64.StdEncoding.DecodeString(encoded)
+	img, err := a.getInputImageData()
 	if err != nil {
-		log.Printf("Error decoding base64: %s", err)
-		return nil
-	}
-
-	var img image.Image
-	switch format {
-	case "jpeg":
-		img, err = jpeg.Decode(bytes.NewReader(imgData))
-	case "png":
-		img, err = png.Decode(bytes.NewReader(imgData))
-	default:
-		log.Printf("Unsupported format: %s", format)
-		return nil
-	}
-	if err != nil {
-		log.Printf("Error decoding image as %s: %s", format, err)
+		log.Printf("Error getting input image data: %s", err)
 		return nil
 	}
 
@@ -110,13 +95,51 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 	return nil
 }
 
-func main() {
-	a := app{}
-	a.Start()
+// getInputImageData は、input-image img タグ内にロードされている画像データを取得する。
+func (a *app) getInputImageData() (image.Image, error) {
+	data := a.el.inputImage.Get("src").String()
 
-	<-make(chan struct{})
+	dArray := strings.Split(data, ",")
+	if len(dArray) != 2 {
+		return nil, fmt.Errorf("Invalid data URL: %s", data)
+	}
+
+	iFmt := dArray[0]
+	var format imgFormat
+	if strings.Contains(iFmt, "image/jpeg") {
+		format = imgFormatJPEG
+	} else if strings.Contains(iFmt, "image/png") {
+		format = imgFormatPNG
+	} else {
+		return nil, fmt.Errorf("Unsupported format: %s", format)
+	}
+
+	encoded := dArray[1]
+	//log.Printf("encoded: %s", encoded)
+
+	imgData, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding base64: %s", err)
+	}
+
+	var img image.Image
+	switch format {
+	case imgFormatJPEG:
+		img, err = jpeg.Decode(bytes.NewReader(imgData))
+	case imgFormatPNG:
+		img, err = png.Decode(bytes.NewReader(imgData))
+	default:
+		return nil, fmt.Errorf("DONOTREACH")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding image as %s: %s", format, err)
+	}
+
+	return img, nil
 }
 
+// getDarkestColor は、画像 img の座標 (tx, ty) の周囲 rng ピクセルの中で最も暗い色を取得する。
+// (tx - rng, ty - rng), (tx + rng, ty + rng) を対角線とする正方形内のピクセルが対象。
 func getDarkestColor(img image.Image, tx, ty, rng int) color.RGBA {
 	minBright := 65536.0
 	w := img.Bounds().Dx()
@@ -140,4 +163,11 @@ func getDarkestColor(img image.Image, tx, ty, rng int) color.RGBA {
 		}
 	}
 	return color.RGBA{uint8(rr >> 8), uint8(rg >> 8), uint8(rb >> 8), 255}
+}
+
+func main() {
+	a := app{}
+	a.Start()
+
+	<-make(chan struct{})
 }

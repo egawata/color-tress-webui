@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	hostport   = ":8080"
+	port       = "8080"
+	hostport   = ":" + port
 	publishDir = "./"
 )
 
@@ -14,6 +15,7 @@ func main() {
 	fs := http.FileServer(http.Dir(publishDir))
 	http.Handle("/", fs)
 
+	log.Printf("Running HTTP Server on http://localhost:%s/colortrace.html", port)
 	if err := http.ListenAndServe(hostport, nil); err != nil {
 		log.Fatal(err)
 	}
