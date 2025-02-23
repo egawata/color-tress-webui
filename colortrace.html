@@ -73,7 +73,8 @@
         <div class="buttons">
             <input type="file" id="file-input" accept="image/*" style="display: none;">
             <button id="fileselect" class="upload-button">Select Image</button>
-            <button id="generate" class="image-upload">Generate</button>
+            <button id="generate" class="image-upload" disabled>Generate</button>
+            <button id="download" disabled>Download Result</button>
         </div>
         <div id="progress">
         </div>
@@ -84,6 +85,7 @@
         const generate = document.getElementById('generate');
         const inputImage = document.getElementById('input-image');
         const outputImage = document.getElementById('output-image');
+        const download = document.getElementById('download')
 
         fileSelect.addEventListener('click', function() {
             fileInput.click();
@@ -105,6 +107,7 @@
                 }
                 inputImage.style.width = width + 'px';
                 inputImage.style.height = height + 'px';
+                generate.disabled = false;
             };
             reader.readAsDataURL(file);
         });
@@ -117,6 +120,13 @@
             window.setTimeout(function() {
                 generate.dispatchEvent(ge)
             }, 10)
+        });
+
+        download.addEventListener("click", function() {
+            const a = document.createElement('a');
+            a.href = outputImage.src;
+            a.download = 'colortrace_out.png';
+            a.click();
         });
     </script>
 </html>

@@ -39,6 +39,7 @@ type dom struct {
 	inputImage  js.Value
 	outputImage js.Value
 	progress    js.Value
+	download    js.Value
 }
 
 type app struct {
@@ -52,6 +53,7 @@ func (a *app) Start() {
 	a.el.inputImage = js.Global().Get("document").Call("getElementById", "input-image")
 	a.el.outputImage = js.Global().Get("document").Call("getElementById", "output-image")
 	a.el.progress = js.Global().Get("document").Call("getElementById", "progress")
+	a.el.download = js.Global().Get("document").Call("getElementById", "download")
 }
 
 func (a *app) generate(this js.Value, p []js.Value) interface{} {
@@ -91,6 +93,7 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 	a.el.outputImage.Set("src", outSrc)
 	a.el.outputImage.Set("width", a.el.inputImage.Get("width"))
 	a.el.outputImage.Set("height", a.el.inputImage.Get("height"))
+	a.el.download.Set("disabled", false)
 
 	return nil
 }
