@@ -8,7 +8,7 @@ import (
 const (
 	port       = "8080"
 	hostport   = ":" + port
-	publishDir = "./"
+	publishDir = "./build"
 )
 
 func main() {
