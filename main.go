@@ -47,7 +47,7 @@ type app struct {
 
 func (a *app) Start() {
 	a.el.btnGenerate = js.Global().Get("document").Call("getElementById", "generate")
-	a.el.btnGenerate.Call("addEventListener", "click", js.FuncOf(a.generate))
+	a.el.btnGenerate.Call("addEventListener", "generate", js.FuncOf(a.generate))
 
 	a.el.inputImage = js.Global().Get("document").Call("getElementById", "input-image")
 	a.el.outputImage = js.Global().Get("document").Call("getElementById", "output-image")
@@ -73,7 +73,7 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 			resImage.SetRGBA(x, y, getDarkestColor(img, x, y, pxRange))
 			completed := int(float32(x*height+y) / float32(totalPx) * 100.0)
 			if prevCompleted < completed {
-				a.el.progress.Set("innerHTML", fmt.Sprintf("%d %% completed...", completed))
+				//a.el.progress.Set("innerHTML", fmt.Sprintf("%d %% completed...", completed))
 				//fmt.Printf("\r[%-50s] %d%%", strings.Repeat("#", completed/2), completed)
 				prevCompleted = completed
 			}
