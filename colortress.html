@@ -115,7 +115,6 @@
         const ge = new CustomEvent("generate", {})
 
         generate.addEventListener("click", function() {
-            console.log("addEventListener click called")
             outputImage.src="./generating.gif"
             window.setTimeout(function() {
                 generate.dispatchEvent(ge)
