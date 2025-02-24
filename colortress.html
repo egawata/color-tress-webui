@@ -56,21 +56,26 @@
                 cursor: pointer;
             }
             .radius-box {
-                margin-bottom: 20px;
+                align-items: center;
             }
             .radius {
                 display: flex;
                 gap: 10px;
             }
             .radius-value {
-                font-size: 16px;
+                font-size: 1rem;
                 margin: 0 10px;
+            }
+            .desc-radius {
+                font-size: 0.8rem;
+                color: #666;
+                margin-bottom: 20px;
             }
         </style>
     </head>
     <body>
         <div class="title">
-            <h1>Color Tress Layer Generator</h1>
+            <h1>色トレスレイヤー生成</h1>
         </div>
         <div class="image-container">
             <div class="image">
@@ -86,6 +91,10 @@
             <label for="radius">Radius:</label>
             <span id="radius-value" class="radius-value">3</span>
             <input type="range" id="radius" class="radius" min="1" max="20" value="3">
+        </div>
+        <div class="desc-radius">
+            線画の線の太さ(pixel)に合わせると良い結果が出ます。<br />
+            大きくするとその分生成に時間がかかります。
         </div>
         <div class="buttons">
             <input type="file" id="file-input" accept="image/*" style="display: none;">
