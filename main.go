@@ -9,11 +9,10 @@ import (
 	"image/jpeg"
 	"image/png"
 	"log"
+	"strconv"
 	"strings"
 	"syscall/js"
 )
-
-const pxRange = 3
 
 type imgFormat int
 
@@ -40,6 +39,7 @@ type dom struct {
 	outputImage js.Value
 	progress    js.Value
 	download    js.Value
+	radius      js.Value
 }
 
 type app struct {
@@ -54,9 +54,20 @@ func (a *app) Start() {
 	a.el.outputImage = js.Global().Get("document").Call("getElementById", "output-image")
 	a.el.progress = js.Global().Get("document").Call("getElementById", "progress")
 	a.el.download = js.Global().Get("document").Call("getElementById", "download")
+	a.el.radius = js.Global().Get("document").Call("getElementById", "radius")
 }
 
 func (a *app) generate(this js.Value, p []js.Value) interface{} {
+	pxRange, err := strconv.Atoi(a.el.radius.Get("value").String())
+	if err != nil {
+		log.Printf("Invalid radius: %s", a.el.radius.Get("value").String())
+		return nil
+	}
+	if pxRange < 1 || pxRange > 100 {
+		log.Printf("Invalid radius: %d", pxRange)
+		return nil
+	}
+
 	img, err := a.getInputImageData()
 	if err != nil {
 		log.Printf("Error getting input image data: %s", err)
@@ -70,11 +81,17 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 
 	totalPx := width * height
 	var prevCompleted int = 0
+
+	df := newDarkestFinder(width, height)
+
 	for x := range width {
 		for y := range height {
-			resImage.SetRGBA(x, y, getDarkestColor(img, x, y, pxRange))
+			resImage.SetRGBA(x, y, df.GetDarkestColor(img, x, y, pxRange))
 			completed := int(float32(x*height+y) / float32(totalPx) * 100.0)
 			if prevCompleted < completed {
+				if completed%10 == 0 {
+					log.Printf("[PROGRESS]%d %% completed...", completed)
+				}
 				//a.el.progress.Set("innerHTML", fmt.Sprintf("%d %% completed...", completed))
 				//fmt.Printf("\r[%-50s] %d%%", strings.Repeat("#", completed/2), completed)
 				prevCompleted = completed
@@ -82,6 +99,7 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 		}
 	}
 
+	log.Printf("Generating image...")
 	var outBuf bytes.Buffer
 	err = png.Encode(&outBuf, resImage)
 	if err != nil {
@@ -141,9 +159,26 @@ func (a *app) getInputImageData() (image.Image, error) {
 	return img, nil
 }
 
+type dotColor struct {
+	r, g, b uint32
+	bright  float64
+}
+
+type darkestFinder struct {
+	darkest [][]*dotColor
+}
+
+func newDarkestFinder(w, h int) *darkestFinder {
+	d := make([][]*dotColor, w)
+	for i := range d {
+		d[i] = make([]*dotColor, h)
+	}
+	return &darkestFinder{darkest: d}
+}
+
 // getDarkestColor は、画像 img の座標 (tx, ty) の周囲 rng ピクセルの中で最も暗い色を取得する。
 // (tx - rng, ty - rng), (tx + rng, ty + rng) を対角線とする正方形内のピクセルが対象。
-func getDarkestColor(img image.Image, tx, ty, rng int) color.RGBA {
+func (df *darkestFinder) GetDarkestColor(img image.Image, tx, ty, rng int) color.RGBA {
 	minBright := 65536.0
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
@@ -151,18 +186,40 @@ func getDarkestColor(img image.Image, tx, ty, rng int) color.RGBA {
 	var rr, rg, rb uint32
 	// 座標 tx, ty の周囲 rng ピクセルの中で最も暗い色を取得
 	for x := tx - rng; x <= tx+rng; x++ {
+		if x < 0 || x >= w {
+			continue
+		}
+
+		if dk := df.darkest[x][ty]; dk != nil {
+			if df.darkest[x][ty].bright < minBright {
+				minBright = dk.bright
+				rr = dk.r
+				rg = dk.g
+				rb = dk.b
+			}
+			continue
+		}
+
+		mb := &dotColor{bright: 65536.0}
 		for y := ty - rng; y <= ty+rng; y++ {
-			if x < 0 || x >= w || y < 0 || y >= h {
+			if y < 0 || y >= h {
 				continue
 			}
 			r, g, b, _ := img.At(x, y).RGBA()
 			bright := 0.2126*float64(r) + 0.7152*float64(g) + 0.0722*float64(b)
-			if bright < minBright {
-				minBright = bright
-				rr = r
-				rg = g
-				rb = b
+			if bright < mb.bright {
+				mb.bright = bright
+				mb.r = r
+				mb.g = g
+				mb.b = b
 			}
+		}
+		df.darkest[x][ty] = mb
+		if mb.bright < minBright {
+			minBright = mb.bright
+			rr = mb.r
+			rg = mb.g
+			rb = mb.b
 		}
 	}
 	return color.RGBA{uint8(rr >> 8), uint8(rg >> 8), uint8(rb >> 8), 255}
