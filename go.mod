@@ -1,4 +1,4 @@
-module github.com/egawata/color-trace-webui
+module github.com/egawata/color-tress-webui
 
 go 1.23.1
 

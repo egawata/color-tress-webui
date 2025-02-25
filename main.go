@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall/js"
+	"time"
 )
 
 type imgFormat int
@@ -43,7 +44,9 @@ type dom struct {
 }
 
 type app struct {
-	el dom
+	el           dom
+	tr           *tracer
+	prevProgress int
 }
 
 func (a *app) Start() {
@@ -74,44 +77,37 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 		return nil
 	}
 
-	width := img.Bounds().Dx()
-	height := img.Bounds().Dy()
+	a.tr = newTracer(img, pxRange)
+	a.tr.SetTimeout(10 * time.Millisecond)
+	js.Global().Call("setTimeout", js.FuncOf(a.continueTrace), 1)
+	a.prevProgress = -1
+	return nil
+}
 
-	resImage := image.NewRGBA(image.Rect(0, 0, width, height))
-
-	totalPx := width * height
-	var prevCompleted int = 0
-
-	df := newDarkestFinder(width, height)
-
-	for x := range width {
-		for y := range height {
-			resImage.SetRGBA(x, y, df.GetDarkestColor(img, x, y, pxRange))
-			completed := int(float32(x*height+y) / float32(totalPx) * 100.0)
-			if prevCompleted < completed {
-				if completed%10 == 0 {
-					log.Printf("[PROGRESS]%d %% completed...", completed)
-				}
-				//a.el.progress.Set("innerHTML", fmt.Sprintf("%d %% completed...", completed))
-				//fmt.Printf("\r[%-50s] %d%%", strings.Repeat("#", completed/2), completed)
-				prevCompleted = completed
-			}
+func (a *app) continueTrace(this js.Value, p []js.Value) interface{} {
+	a.tr.Continue()
+	if a.tr.IsCompleted() {
+		log.Printf("Generating image...")
+		var outBuf bytes.Buffer
+		err := png.Encode(&outBuf, a.tr.GetResult())
+		if err != nil {
+			log.Fatalf("failed to encode image: %v", err)
+			return nil
 		}
+		outBase64Data := base64.StdEncoding.EncodeToString(outBuf.Bytes())
+		outSrc := "data:image/png;base64," + outBase64Data
+		a.el.outputImage.Set("src", outSrc)
+		a.el.outputImage.Set("width", a.el.inputImage.Get("width"))
+		a.el.outputImage.Set("height", a.el.inputImage.Get("height"))
+		a.el.download.Set("disabled", false)
+		a.el.progress.Set("innerHTML", "Completed!")
+	} else {
+		if p := a.tr.GetProgress(); a.prevProgress < int(p) {
+			a.el.progress.Set("innerHTML", fmt.Sprintf("%.2f %% completed...", p))
+			a.prevProgress = int(p)
+		}
+		js.Global().Call("setTimeout", js.FuncOf(a.continueTrace), 1)
 	}
-
-	log.Printf("Generating image...")
-	var outBuf bytes.Buffer
-	err = png.Encode(&outBuf, resImage)
-	if err != nil {
-		log.Fatalf("failed to encode image: %v", err)
-		return nil
-	}
-	outBase64Data := base64.StdEncoding.EncodeToString(outBuf.Bytes())
-	outSrc := "data:image/png;base64," + outBase64Data
-	a.el.outputImage.Set("src", outSrc)
-	a.el.outputImage.Set("width", a.el.inputImage.Get("width"))
-	a.el.outputImage.Set("height", a.el.inputImage.Get("height"))
-	a.el.download.Set("disabled", false)
 
 	return nil
 }
@@ -230,4 +226,65 @@ func main() {
 	a.Start()
 
 	<-make(chan struct{})
+}
+
+type tracer struct {
+	x, y          int
+	width, height int
+	img           image.Image
+	df            *darkestFinder
+	pxRange       int
+	result        *image.RGBA
+	timeout       time.Duration
+	completed     bool
+}
+
+func newTracer(i image.Image, pRange int) *tracer {
+	w := i.Bounds().Dx()
+	h := i.Bounds().Dy()
+
+	df := newDarkestFinder(w, h)
+	return &tracer{
+		x:       0,
+		y:       0,
+		width:   w,
+		height:  h,
+		img:     i,
+		pxRange: pRange,
+		df:      df,
+		timeout: 10 * time.Millisecond,
+		result:  image.NewRGBA(i.Bounds()),
+	}
+}
+
+func (t *tracer) SetTimeout(d time.Duration) {
+	t.timeout = d
+}
+
+func (t *tracer) GetResult() *image.RGBA {
+	return t.result
+}
+
+func (t *tracer) GetProgress() float32 {
+	return float32(t.x+t.y*t.width) / float32(t.width*t.height) * 100.0
+}
+
+func (t *tracer) IsCompleted() bool {
+	return t.completed
+}
+
+func (t *tracer) Continue() {
+	start := time.Now()
+	for time.Since(start) < t.timeout {
+		if t.y >= t.height {
+			t.completed = true
+			return
+		}
+		t.result.SetRGBA(t.x, t.y, t.df.GetDarkestColor(t.img, t.x, t.y, t.pxRange))
+		t.x++
+		if t.x >= t.width {
+			t.x = 0
+			t.y++
+		}
+	}
 }

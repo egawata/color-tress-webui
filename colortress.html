@@ -71,6 +71,15 @@
                 color: #666;
                 margin-bottom: 20px;
             }
+            .progress {
+                border: 1px solid #ccc;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 50px;
+                width: 400px;
+                margin: 20px 0;
+            }
         </style>
     </head>
     <body>
@@ -102,7 +111,7 @@
             <button id="generate" class="image-upload" disabled>Generate</button>
             <button id="download" disabled>Download Result</button>
         </div>
-        <div id="progress">
+        <div id="progress" class="progress">
         </div>
     </body>
     <script>
