@@ -78,13 +78,17 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 	}
 
 	a.tr = newTracer(img, pxRange)
-	a.tr.SetTimeout(10 * time.Millisecond)
+	a.tr.SetTimeout(100 * time.Millisecond)
 	js.Global().Call("setTimeout", js.FuncOf(a.continueTrace), 1)
 	a.prevProgress = -1
 	return nil
 }
 
 func (a *app) continueTrace(this js.Value, p []js.Value) interface{} {
+	if a.tr == nil {
+		return nil
+	}
+
 	a.tr.Continue()
 	if a.tr.IsCompleted() {
 		log.Printf("Generating image...")
@@ -101,11 +105,11 @@ func (a *app) continueTrace(this js.Value, p []js.Value) interface{} {
 		a.el.outputImage.Set("height", a.el.inputImage.Get("height"))
 		a.el.download.Set("disabled", false)
 		a.el.progress.Set("innerHTML", "Completed!")
+		a.tr = nil
 	} else {
-		if p := a.tr.GetProgress(); a.prevProgress < int(p) {
-			a.el.progress.Set("innerHTML", fmt.Sprintf("%.2f %% completed...", p))
-			a.prevProgress = int(p)
-		}
+		pr := a.tr.GetProgress()
+		a.el.progress.Set("innerHTML", fmt.Sprintf("%.2f %% completed...", pr))
+		a.prevProgress = int(pr)
 		js.Global().Call("setTimeout", js.FuncOf(a.continueTrace), 1)
 	}
 
@@ -172,9 +176,11 @@ func newDarkestFinder(w, h int) *darkestFinder {
 	return &darkestFinder{darkest: d}
 }
 
+var mb = &dotColor{bright: 65536.0}
+
 // getDarkestColor は、画像 img の座標 (tx, ty) の周囲 rng ピクセルの中で最も暗い色を取得する。
 // (tx - rng, ty - rng), (tx + rng, ty + rng) を対角線とする正方形内のピクセルが対象。
-func (df *darkestFinder) GetDarkestColor(img image.Image, tx, ty, rng int) color.RGBA {
+func (df *darkestFinder) GetDarkestColor(img image.Image, tx, ty, rng int) (uint8, uint8, uint8, uint8) {
 	minBright := 65536.0
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
@@ -196,7 +202,7 @@ func (df *darkestFinder) GetDarkestColor(img image.Image, tx, ty, rng int) color
 			continue
 		}
 
-		mb := &dotColor{bright: 65536.0}
+		mb.bright = 65536.0
 		for y := ty - rng; y <= ty+rng; y++ {
 			if y < 0 || y >= h {
 				continue
@@ -218,7 +224,7 @@ func (df *darkestFinder) GetDarkestColor(img image.Image, tx, ty, rng int) color
 			rb = mb.b
 		}
 	}
-	return color.RGBA{uint8(rr >> 8), uint8(rg >> 8), uint8(rb >> 8), 255}
+	return uint8(rr >> 8), uint8(rg >> 8), uint8(rb >> 8), 255
 }
 
 func main() {
@@ -273,6 +279,8 @@ func (t *tracer) IsCompleted() bool {
 	return t.completed
 }
 
+var colorRGBA = color.RGBA{0, 0, 0, 255}
+
 func (t *tracer) Continue() {
 	start := time.Now()
 	for time.Since(start) < t.timeout {
@@ -280,7 +288,13 @@ func (t *tracer) Continue() {
 			t.completed = true
 			return
 		}
-		t.result.SetRGBA(t.x, t.y, t.df.GetDarkestColor(t.img, t.x, t.y, t.pxRange))
+		r, g, b, a := t.df.GetDarkestColor(t.img, t.x, t.y, t.pxRange)
+		colorRGBA.R = r
+		colorRGBA.G = g
+		colorRGBA.B = b
+		colorRGBA.A = a
+
+		t.result.SetRGBA(t.x, t.y, colorRGBA)
 		t.x++
 		if t.x >= t.width {
 			t.x = 0
