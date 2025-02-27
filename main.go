@@ -105,7 +105,6 @@ func (a *app) continueTrace(this js.Value, p []js.Value) interface{} {
 		a.el.outputImage.Set("height", a.el.inputImage.Get("height"))
 		a.el.download.Set("disabled", false)
 		a.el.progress.Set("innerHTML", "Completed!")
-		a.tr = nil
 	} else {
 		pr := a.tr.GetProgress()
 		a.el.progress.Set("innerHTML", fmt.Sprintf("%.2f %% completed...", pr))
@@ -245,9 +244,17 @@ type tracer struct {
 	completed     bool
 }
 
+var resImg *image.RGBA
+
 func newTracer(i image.Image, pRange int) *tracer {
 	w := i.Bounds().Dx()
 	h := i.Bounds().Dy()
+
+	// 結果格納用画像がすでに確保されていて、サイズが同じ場合は再利用する。
+	// それ以外の場合は新規作成する。
+	if resImg == nil || resImg.Bounds().Dx() != w || resImg.Bounds().Dy() != h {
+		resImg = image.NewRGBA(i.Bounds())
+	}
 
 	df := newDarkestFinder(w, h)
 	return &tracer{
@@ -259,7 +266,7 @@ func newTracer(i image.Image, pRange int) *tracer {
 		pxRange: pRange,
 		df:      df,
 		timeout: 10 * time.Millisecond,
-		result:  image.NewRGBA(i.Bounds()),
+		result:  resImg,
 	}
 }
 
