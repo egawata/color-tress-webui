@@ -35,4 +35,4 @@ go run localserver/run_server.go
 
 ## License
 
-Licensed under the Apache 2.0 license. Copyright (c) 2024 by egawata
+Licensed under the Apache 2.0 license. Copyright (c) 2025 by egawata
