@@ -6,7 +6,8 @@
 
 ## ビルド
 
-[tinygo](https://tinygo.org/)が必要です。
+そのまま実行するには [tinygo](https://tinygo.org/)が必要です。
+本家 go を使用したい場合は、コメントアウト部分を適宜編集してください。
 
 ~~~sh
 scripts/build.sh
