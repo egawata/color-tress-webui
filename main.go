@@ -91,7 +91,6 @@ func (a *app) continueTrace(this js.Value, p []js.Value) interface{} {
 
 	a.tr.Continue()
 	if a.tr.IsCompleted() {
-		log.Printf("Generating image...")
 		var outBuf bytes.Buffer
 		err := png.Encode(&outBuf, a.tr.GetResult())
 		if err != nil {
@@ -219,7 +218,13 @@ func (df *darkestFinder) GetDarkestColor(img image.Image, tx, ty, rng int) (uint
 				mb.b = b
 			}
 		}
-		df.darkest[indX] = mb
+		if df.darkest[indX] == nil {
+			df.darkest[indX] = &dotColor{}
+		}
+		df.darkest[indX].r = mb.r
+		df.darkest[indX].g = mb.g
+		df.darkest[indX].b = mb.b
+		df.darkest[indX].bright = mb.bright
 		if mb.bright < minBright {
 			minBright = mb.bright
 			rr = mb.r
