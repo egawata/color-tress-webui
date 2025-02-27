@@ -164,14 +164,15 @@ type dotColor struct {
 }
 
 type darkestFinder struct {
-	darkest [][]*dotColor
+	darkest []*dotColor
 }
 
-func newDarkestFinder(w, h int) *darkestFinder {
-	d := make([][]*dotColor, w)
-	for i := range d {
-		d[i] = make([]*dotColor, h)
-	}
+const dfSize = 100
+
+var dFinder = newDarkestFinder()
+
+func newDarkestFinder() *darkestFinder {
+	d := make([]*dotColor, dfSize)
 	return &darkestFinder{darkest: d}
 }
 
@@ -191,14 +192,17 @@ func (df *darkestFinder) GetDarkestColor(img image.Image, tx, ty, rng int) (uint
 			continue
 		}
 
-		if dk := df.darkest[x][ty]; dk != nil {
-			if df.darkest[x][ty].bright < minBright {
-				minBright = dk.bright
-				rr = dk.r
-				rg = dk.g
-				rb = dk.b
+		indX := x % dfSize
+		if x < tx {
+			if dk := df.darkest[indX]; dk != nil {
+				if dk.bright < minBright {
+					minBright = dk.bright
+					rr = dk.r
+					rg = dk.g
+					rb = dk.b
+				}
+				continue
 			}
-			continue
 		}
 
 		mb.bright = 65536.0
@@ -215,7 +219,7 @@ func (df *darkestFinder) GetDarkestColor(img image.Image, tx, ty, rng int) (uint
 				mb.b = b
 			}
 		}
-		df.darkest[x][ty] = mb
+		df.darkest[indX] = mb
 		if mb.bright < minBright {
 			minBright = mb.bright
 			rr = mb.r
@@ -256,7 +260,6 @@ func newTracer(i image.Image, pRange int) *tracer {
 		resImg = image.NewRGBA(i.Bounds())
 	}
 
-	df := newDarkestFinder(w, h)
 	return &tracer{
 		x:       0,
 		y:       0,
@@ -264,8 +267,8 @@ func newTracer(i image.Image, pRange int) *tracer {
 		height:  h,
 		img:     i,
 		pxRange: pRange,
-		df:      df,
-		timeout: 10 * time.Millisecond,
+		df:      dFinder,
+		timeout: 50 * time.Millisecond,
 		result:  resImg,
 	}
 }
