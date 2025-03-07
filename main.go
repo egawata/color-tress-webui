@@ -341,10 +341,13 @@ func modToDarkerColor(r, g, b uint8) (uint8, uint8, uint8) {
 		h += 5.0
 	}
 
-	s = s + (1.0-s)/2.0
-	if s > 0.99 {
-		s = 0.99
+	if s > 0.01 {
+		s = s + (1.0-s)/2.0
+		if s > 0.99 {
+			s = 0.99
+		}
 	}
+
 	v /= 2.0
 
 	nr, ng, nb, err := colorconv.HSVToRGB(h, s, v)
