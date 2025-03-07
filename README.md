@@ -33,6 +33,16 @@ go run localserver/run_server.go
 - 下のレイヤーでクリッピングする設定にします。
 - 透明度を適宜調整します。
 
+## Web版
+
+https://egawata.tokyo/color-tress/colortress.html
+
+こちらでも公開しています。
+
+## ご意見、機能要望
+
+ご意見お待ちしています。Pull Request 大歓迎です。
+
 ## License
 
 Licensed under the Apache 2.0 license. Copyright (c) 2025 by egawata
