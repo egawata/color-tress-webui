@@ -13,6 +13,8 @@ import (
 	"strings"
 	"syscall/js"
 	"time"
+
+	"github.com/crazy3lf/colorconv"
 )
 
 type imgFormat int
@@ -304,6 +306,7 @@ func (t *tracer) Continue() {
 			return
 		}
 		r, g, b, a := t.df.GetDarkestColor(t.img, t.x, t.y, t.pxRange)
+		r, g, b = modToDarkerColor(r, g, b)
 		colorRGBA.R = r
 		colorRGBA.G = g
 		colorRGBA.B = b
@@ -316,4 +319,40 @@ func (t *tracer) Continue() {
 			t.y++
 		}
 	}
+}
+
+var cacheDarker = make(map[uint32][3]uint8)
+
+func modToDarkerColor(r, g, b uint8) (uint8, uint8, uint8) {
+	if c, ok := cacheDarker[uint32(r)<<16|uint32(g)<<8|uint32(b)]; ok {
+		return c[0], c[1], c[2]
+	}
+
+	var h, s, v float64
+	h, s, v = colorconv.RGBToHSV(r, g, b)
+
+	// 赤系の色は色相をマイナス方向に、青系の色はプラス方向にずらす
+	if h < 60.0 || h > 240.0 {
+		h -= 5.0
+		if h < 0.0 {
+			h += 359.9
+		}
+	} else {
+		h += 5.0
+	}
+
+	s = s + (1.0-s)/2.0
+	if s > 0.99 {
+		s = 0.99
+	}
+	v /= 2.0
+
+	nr, ng, nb, err := colorconv.HSVToRGB(h, s, v)
+	if err != nil {
+		log.Printf("failed to convert HSV(%f, %f, %f) to RGB: %v", h, s, v, err)
+		return r, g, b
+	}
+	cacheDarker[uint32(r)<<16|uint32(g)<<8|uint32(b)] = [3]uint8{nr, ng, nb}
+
+	return nr, ng, nb
 }
