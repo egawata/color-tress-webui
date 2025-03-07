@@ -47,7 +47,7 @@ type dom struct {
 
 type app struct {
 	el           dom
-	tr           *tracer
+	tr           *tresser
 	prevProgress int
 }
 
@@ -79,14 +79,14 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 		return nil
 	}
 
-	a.tr = newTracer(img, pxRange)
+	a.tr = newTresser(img, pxRange)
 	a.tr.SetTimeout(100 * time.Millisecond)
-	js.Global().Call("setTimeout", js.FuncOf(a.continueTrace), 1)
+	js.Global().Call("setTimeout", js.FuncOf(a.continueTress), 1)
 	a.prevProgress = -1
 	return nil
 }
 
-func (a *app) continueTrace(this js.Value, p []js.Value) interface{} {
+func (a *app) continueTress(this js.Value, p []js.Value) interface{} {
 	if a.tr == nil {
 		return nil
 	}
@@ -110,7 +110,7 @@ func (a *app) continueTrace(this js.Value, p []js.Value) interface{} {
 		pr := a.tr.GetProgress()
 		a.el.progress.Set("innerHTML", fmt.Sprintf("%.2f %% completed...", pr))
 		a.prevProgress = int(pr)
-		js.Global().Call("setTimeout", js.FuncOf(a.continueTrace), 1)
+		js.Global().Call("setTimeout", js.FuncOf(a.continueTress), 1)
 	}
 
 	return nil
@@ -244,7 +244,7 @@ func main() {
 	<-make(chan struct{})
 }
 
-type tracer struct {
+type tresser struct {
 	x, y          int
 	width, height int
 	img           image.Image
@@ -257,7 +257,7 @@ type tracer struct {
 
 var resImg *image.RGBA
 
-func newTracer(i image.Image, pRange int) *tracer {
+func newTresser(i image.Image, pRange int) *tresser {
 	w := i.Bounds().Dx()
 	h := i.Bounds().Dy()
 
@@ -267,7 +267,7 @@ func newTracer(i image.Image, pRange int) *tracer {
 		resImg = image.NewRGBA(i.Bounds())
 	}
 
-	return &tracer{
+	return &tresser{
 		x:       0,
 		y:       0,
 		width:   w,
@@ -280,25 +280,25 @@ func newTracer(i image.Image, pRange int) *tracer {
 	}
 }
 
-func (t *tracer) SetTimeout(d time.Duration) {
+func (t *tresser) SetTimeout(d time.Duration) {
 	t.timeout = d
 }
 
-func (t *tracer) GetResult() *image.RGBA {
+func (t *tresser) GetResult() *image.RGBA {
 	return t.result
 }
 
-func (t *tracer) GetProgress() float32 {
+func (t *tresser) GetProgress() float32 {
 	return float32(t.x+t.y*t.width) / float32(t.width*t.height) * 100.0
 }
 
-func (t *tracer) IsCompleted() bool {
+func (t *tresser) IsCompleted() bool {
 	return t.completed
 }
 
 var colorRGBA = color.RGBA{0, 0, 0, 255}
 
-func (t *tracer) Continue() {
+func (t *tresser) Continue() {
 	start := time.Now()
 	for time.Since(start) < t.timeout {
 		if t.y >= t.height {
