@@ -348,7 +348,10 @@ func modToDarkerColor(r, g, b uint8) (uint8, uint8, uint8) {
 		}
 	}
 
-	v /= 2.0
+	v -= 0.25
+	if v < 0.0 {
+		v = 0.0
+	}
 
 	nr, ng, nb, err := colorconv.HSVToRGB(h, s, v)
 	if err != nil {
