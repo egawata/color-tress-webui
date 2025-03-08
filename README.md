@@ -39,18 +39,6 @@ https://egawata.tokyo/color-tress/colortress.html
 
 こちらでも公開しています。
 
-## ダウンロード版
-
-現在は Mac(Apple silicon)版のみです。
-
-`./dist/mac/` 以下にあるファイルをダウンロードしてください。
-
-https://github.com/egawata/color-tress-webui/raw/refs/heads/master/dist/mac/colortress_mac.tar.gz
-
-解凍後、`colortress_server` をダブルクリックで起動できます。
-(セキュリティ設定により実行が許可されない場合があります。システム設定でこのアプリケーションの実行を許可する必要があるかもしれません。)
-
-
 ## ご意見、機能要望
 
 ご意見お待ちしています。Pull Request 大歓迎です。
