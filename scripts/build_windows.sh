@@ -12,7 +12,7 @@ mkdir -p $dist
 ./scripts/build.sh
 cp ./build/* $htmldir
 
-GOOS=windows GOARCH=amd64 go build -o $workdir/colortress_server ./localserver/for_dist/run_server.go
+GOOS=windows GOARCH=amd64 go build -o $workdir/colortress_server.exe ./localserver/for_dist/run_server.go
 
 tar -czvf $dist/colortress_windows.tar.gz -C $workdir/ .
 
