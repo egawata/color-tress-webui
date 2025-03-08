@@ -41,7 +41,7 @@ https://egawata.tokyo/color-tress/colortress.html
 
 ## ダウンロード版
 
-現在は mac 版のみです。
+現在は Mac(Apple silicon)版のみです。
 
 `./dist/mac/` 以下にあるファイルをダウンロードしてください。
 
