@@ -24,6 +24,8 @@ go run localserver/run_server.go
 
 ## 使い方
 
+詳しい使い方は https://egawata.tokyo/color-tress にも掲載しています。
+
 - 画像から、線画レイヤーを非表示にしたものを用意します。(png 形式推奨)
 - `colortress.html` を開きます。
 - `Select Image` ボタンを押して、用意した画像を選択します。
