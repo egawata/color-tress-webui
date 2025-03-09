@@ -1,5 +1,7 @@
 # color-tress-webui : 色トレスレイヤー生成
 
+[English doc](README_en.md)
+
 ## 概要
 
 色トレス用のレイヤーを簡易的に生成するツールです。
