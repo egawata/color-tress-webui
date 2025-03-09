@@ -1,10 +1,10 @@
-# color-tress-webui : Color Trace Layer Generator
+# color-tress-webui : Color Tress Layer Generator
 
 [Japanese Doc](README.md)
 
 ## Overview
 
-This is a tool for easily generating layers for color tracing.
+This is a tool for easily generating layers for color tressing.
 
 ## Build
 
@@ -32,7 +32,7 @@ Detailed usage is also available at https://egawata.tokyo/color-tress.
 - Open `colortress.html`.
 - Click `Select Image` button and choose the prepared image.
 - Click `Generate` button.
-- Once the trace image is generated, click the `Download` button to save it.
+- Once the output image is generated, click `Download` button to save it.
 - Load this image into your paint tool and place it just above the line art layer.
 - Set it to clip to the layer below.
 - Adjust the opacity as needed.
