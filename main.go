@@ -43,6 +43,7 @@ type dom struct {
 	progress    js.Value
 	download    js.Value
 	radius      js.Value
+	brightness  js.Value
 }
 
 type app struct {
@@ -60,6 +61,7 @@ func (a *app) Start() {
 	a.el.progress = js.Global().Get("document").Call("getElementById", "progress")
 	a.el.download = js.Global().Get("document").Call("getElementById", "download")
 	a.el.radius = js.Global().Get("document").Call("getElementById", "radius")
+	a.el.brightness = js.Global().Get("document").Call("getElementById", "brightness")
 }
 
 func (a *app) generate(this js.Value, p []js.Value) interface{} {
@@ -73,13 +75,23 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 		return nil
 	}
 
+	brightness, err := strconv.ParseFloat(a.el.brightness.Get("value").String(), 64)
+	if err != nil {
+		log.Printf("Invalid brightness: %s", a.el.brightness.Get("value").String())
+		return nil
+	}
+	if brightness < 0.0 || brightness > 1.0 {
+		log.Printf("Invalid brightness: %f", brightness)
+		return nil
+	}
+
 	img, err := a.getInputImageData()
 	if err != nil {
 		log.Printf("Error getting input image data: %s", err)
 		return nil
 	}
 
-	a.tr = newTresser(img, pxRange)
+	a.tr = newTresser(img, pxRange, brightness)
 	a.tr.SetTimeout(100 * time.Millisecond)
 	js.Global().Call("setTimeout", js.FuncOf(a.continueTress), 1)
 	a.prevProgress = -1
@@ -250,6 +262,7 @@ type tresser struct {
 	img           image.Image
 	df            *darkestFinder
 	pxRange       int
+	brightness    float64
 	result        *image.RGBA
 	timeout       time.Duration
 	completed     bool
@@ -257,7 +270,7 @@ type tresser struct {
 
 var resImg *image.RGBA
 
-func newTresser(i image.Image, pRange int) *tresser {
+func newTresser(i image.Image, pRange int, brightness float64) *tresser {
 	w := i.Bounds().Dx()
 	h := i.Bounds().Dy()
 
@@ -268,15 +281,16 @@ func newTresser(i image.Image, pRange int) *tresser {
 	}
 
 	return &tresser{
-		x:       0,
-		y:       0,
-		width:   w,
-		height:  h,
-		img:     i,
-		pxRange: pRange,
-		df:      dFinder,
-		timeout: 50 * time.Millisecond,
-		result:  resImg,
+		x:          0,
+		y:          0,
+		width:      w,
+		height:     h,
+		img:        i,
+		pxRange:    pRange,
+		brightness: brightness,
+		df:         dFinder,
+		timeout:    50 * time.Millisecond,
+		result:     resImg,
 	}
 }
 
@@ -306,7 +320,7 @@ func (t *tresser) Continue() {
 			return
 		}
 		r, g, b, a := t.df.GetDarkestColor(t.img, t.x, t.y, t.pxRange)
-		r, g, b = modToDarkerColor(r, g, b)
+		r, g, b = t.modToDarkerColor(r, g, b)
 		colorRGBA.R = r
 		colorRGBA.G = g
 		colorRGBA.B = b
@@ -323,7 +337,7 @@ func (t *tresser) Continue() {
 
 var cacheDarker = make(map[uint32][3]uint8)
 
-func modToDarkerColor(r, g, b uint8) (uint8, uint8, uint8) {
+func (t *tresser) modToDarkerColor(r, g, b uint8) (uint8, uint8, uint8) {
 	if c, ok := cacheDarker[uint32(r)<<16|uint32(g)<<8|uint32(b)]; ok {
 		return c[0], c[1], c[2]
 	}
@@ -348,7 +362,7 @@ func modToDarkerColor(r, g, b uint8) (uint8, uint8, uint8) {
 		}
 	}
 
-	v -= 0.25
+	v -= t.brightness
 	if v < 0.0 {
 		v = 0.0
 	}

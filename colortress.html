@@ -101,6 +101,11 @@
             <span id="radius-value" class="radius-value">3</span>
             <input type="range" id="radius" class="radius" min="1" max="20" value="3">
         </div>
+        <div class="radius-box">
+            <label for="brightness">明度減少:</label>
+            <span id="brightness-value" class="radius-value">0.25</span>
+            <input type="range" id="brightness" class="radius" min="0" max="1" step="0.01" value="0.25">
+        </div>
         <div class="desc-radius">
             線画の線の太さ(pixel)に合わせると良い結果が出ます。<br />
             大きくするとその分生成に時間がかかります。
@@ -165,6 +170,10 @@
 
         document.getElementById('radius').addEventListener('input', function() {
             document.getElementById('radius-value').textContent = this.value;
+        });
+        
+        document.getElementById('brightness').addEventListener('input', function() {
+            document.getElementById('brightness-value').textContent = this.value;
         });
     </script>
 </html>
