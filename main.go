@@ -280,6 +280,8 @@ func newTresser(i image.Image, pRange int, brightnessReduct float64) *tresser {
 		resImg = image.NewRGBA(i.Bounds())
 	}
 
+	cacheDarker = make(map[uint32][3]uint8)
+
 	return &tresser{
 		x:          0,
 		y:          0,
