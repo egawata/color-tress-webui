@@ -37,13 +37,13 @@ func (f imgFormat) String() string {
 }
 
 type dom struct {
-	btnGenerate js.Value
-	inputImage  js.Value
-	outputImage js.Value
-	progress    js.Value
-	download    js.Value
-	radius      js.Value
-	brightness  js.Value
+	btnGenerate       js.Value
+	inputImage        js.Value
+	outputImage       js.Value
+	progress          js.Value
+	download          js.Value
+	radius            js.Value
+	brightnessReduct  js.Value
 }
 
 type app struct {
@@ -61,7 +61,7 @@ func (a *app) Start() {
 	a.el.progress = js.Global().Get("document").Call("getElementById", "progress")
 	a.el.download = js.Global().Get("document").Call("getElementById", "download")
 	a.el.radius = js.Global().Get("document").Call("getElementById", "radius")
-	a.el.brightness = js.Global().Get("document").Call("getElementById", "brightness")
+	a.el.brightnessReduct = js.Global().Get("document").Call("getElementById", "brightnessReduct")
 }
 
 func (a *app) generate(this js.Value, p []js.Value) interface{} {
@@ -75,13 +75,13 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 		return nil
 	}
 
-	brightness, err := strconv.ParseFloat(a.el.brightness.Get("value").String(), 64)
+	brightnessReduct, err := strconv.ParseFloat(a.el.brightnessReduct.Get("value").String(), 64)
 	if err != nil {
-		log.Printf("Invalid brightness: %s", a.el.brightness.Get("value").String())
+		log.Printf("Invalid brightness reduction: %s", a.el.brightnessReduct.Get("value").String())
 		return nil
 	}
-	if brightness < 0.0 || brightness > 1.0 {
-		log.Printf("Invalid brightness: %f", brightness)
+	if brightnessReduct < 0.0 || brightnessReduct > 1.0 {
+		log.Printf("Invalid brightness reduction: %f", brightnessReduct)
 		return nil
 	}
 
@@ -91,7 +91,7 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 		return nil
 	}
 
-	a.tr = newTresser(img, pxRange, brightness)
+	a.tr = newTresser(img, pxRange, brightnessReduct)
 	a.tr.SetTimeout(100 * time.Millisecond)
 	js.Global().Call("setTimeout", js.FuncOf(a.continueTress), 1)
 	a.prevProgress = -1
@@ -257,20 +257,20 @@ func main() {
 }
 
 type tresser struct {
-	x, y          int
-	width, height int
-	img           image.Image
-	df            *darkestFinder
-	pxRange       int
-	brightness    float64
-	result        *image.RGBA
-	timeout       time.Duration
-	completed     bool
+	x, y             int
+	width, height    int
+	img              image.Image
+	df               *darkestFinder
+	pxRange          int
+	brightnessReduct float64
+	result           *image.RGBA
+	timeout          time.Duration
+	completed        bool
 }
 
 var resImg *image.RGBA
 
-func newTresser(i image.Image, pRange int, brightness float64) *tresser {
+func newTresser(i image.Image, pRange int, brightnessReduct float64) *tresser {
 	w := i.Bounds().Dx()
 	h := i.Bounds().Dy()
 
@@ -287,7 +287,7 @@ func newTresser(i image.Image, pRange int, brightness float64) *tresser {
 		height:     h,
 		img:        i,
 		pxRange:    pRange,
-		brightness: brightness,
+		brightnessReduct: brightnessReduct,
 		df:         dFinder,
 		timeout:    50 * time.Millisecond,
 		result:     resImg,
@@ -362,7 +362,7 @@ func (t *tresser) modToDarkerColor(r, g, b uint8) (uint8, uint8, uint8) {
 		}
 	}
 
-	v -= t.brightness
+	v -= t.brightnessReduct
 	if v < 0.0 {
 		v = 0.0
 	}
