@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"image"
-	"image/color"
 	"image/jpeg"
 	"image/png"
 	"log"
@@ -14,7 +13,7 @@ import (
 	"syscall/js"
 	"time"
 
-	"github.com/crazy3lf/colorconv"
+	"github.com/egawata/color-tress-webui/tresser"
 )
 
 type imgFormat int
@@ -48,7 +47,7 @@ type dom struct {
 
 type app struct {
 	el           dom
-	tr           *tresser
+	tr           *tresser.Tresser
 	prevProgress int
 }
 
@@ -91,7 +90,7 @@ func (a *app) generate(this js.Value, p []js.Value) interface{} {
 		return nil
 	}
 
-	a.tr = newTresser(img, pxRange, brightnessReduct)
+	a.tr = tresser.NewTresser(img, pxRange, brightnessReduct)
 	a.tr.SetTimeout(100 * time.Millisecond)
 	js.Global().Call("setTimeout", js.FuncOf(a.continueTress), 1)
 	a.prevProgress = -1
@@ -171,210 +170,9 @@ func (a *app) getInputImageData() (image.Image, error) {
 	return img, nil
 }
 
-type dotColor struct {
-	r, g, b uint32
-	bright  float64
-}
-
-type darkestFinder struct {
-	darkest []*dotColor
-}
-
-const dfSize = 100
-
-var dFinder = newDarkestFinder()
-
-func newDarkestFinder() *darkestFinder {
-	d := make([]*dotColor, dfSize)
-	return &darkestFinder{darkest: d}
-}
-
-var mb = &dotColor{bright: 65536.0}
-
-// getDarkestColor は、画像 img の座標 (tx, ty) の周囲 rng ピクセルの中で最も暗い色を取得する。
-// (tx - rng, ty - rng), (tx + rng, ty + rng) を対角線とする正方形内のピクセルが対象。
-func (df *darkestFinder) GetDarkestColor(img image.Image, tx, ty, rng int) (uint8, uint8, uint8, uint8) {
-	minBright := 65536.0
-	w := img.Bounds().Dx()
-	h := img.Bounds().Dy()
-
-	var rr, rg, rb uint32
-	// 座標 tx, ty の周囲 rng ピクセルの中で最も暗い色を取得
-	for x := tx - rng; x <= tx+rng; x++ {
-		if x < 0 || x >= w {
-			continue
-		}
-
-		indX := x % dfSize
-		if x < tx {
-			if dk := df.darkest[indX]; dk != nil {
-				if dk.bright < minBright {
-					minBright = dk.bright
-					rr = dk.r
-					rg = dk.g
-					rb = dk.b
-				}
-				continue
-			}
-		}
-
-		mb.bright = 65536.0
-		for y := ty - rng; y <= ty+rng; y++ {
-			if y < 0 || y >= h {
-				continue
-			}
-			r, g, b, _ := img.At(x, y).RGBA()
-			bright := 0.2126*float64(r) + 0.7152*float64(g) + 0.0722*float64(b)
-			if bright < mb.bright {
-				mb.bright = bright
-				mb.r = r
-				mb.g = g
-				mb.b = b
-			}
-		}
-		if df.darkest[indX] == nil {
-			df.darkest[indX] = &dotColor{}
-		}
-		df.darkest[indX].r = mb.r
-		df.darkest[indX].g = mb.g
-		df.darkest[indX].b = mb.b
-		df.darkest[indX].bright = mb.bright
-		if mb.bright < minBright {
-			minBright = mb.bright
-			rr = mb.r
-			rg = mb.g
-			rb = mb.b
-		}
-	}
-	return uint8(rr >> 8), uint8(rg >> 8), uint8(rb >> 8), 255
-}
-
 func main() {
 	a := app{}
 	a.Start()
 
 	<-make(chan struct{})
-}
-
-type tresser struct {
-	x, y             int
-	width, height    int
-	img              image.Image
-	df               *darkestFinder
-	pxRange          int
-	brightnessReduct float64
-	result           *image.RGBA
-	timeout          time.Duration
-	completed        bool
-}
-
-var resImg *image.RGBA
-
-func newTresser(i image.Image, pRange int, brightnessReduct float64) *tresser {
-	w := i.Bounds().Dx()
-	h := i.Bounds().Dy()
-
-	// 結果格納用画像がすでに確保されていて、サイズが同じ場合は再利用する。
-	// それ以外の場合は新規作成する。
-	if resImg == nil || resImg.Bounds().Dx() != w || resImg.Bounds().Dy() != h {
-		resImg = image.NewRGBA(i.Bounds())
-	}
-
-	cacheDarker = make(map[uint32][3]uint8)
-
-	return &tresser{
-		x:          0,
-		y:          0,
-		width:      w,
-		height:     h,
-		img:        i,
-		pxRange:    pRange,
-		brightnessReduct: brightnessReduct,
-		df:         dFinder,
-		timeout:    50 * time.Millisecond,
-		result:     resImg,
-	}
-}
-
-func (t *tresser) SetTimeout(d time.Duration) {
-	t.timeout = d
-}
-
-func (t *tresser) GetResult() *image.RGBA {
-	return t.result
-}
-
-func (t *tresser) GetProgress() float32 {
-	return float32(t.x+t.y*t.width) / float32(t.width*t.height) * 100.0
-}
-
-func (t *tresser) IsCompleted() bool {
-	return t.completed
-}
-
-var colorRGBA = color.RGBA{0, 0, 0, 255}
-
-func (t *tresser) Continue() {
-	start := time.Now()
-	for time.Since(start) < t.timeout {
-		if t.y >= t.height {
-			t.completed = true
-			return
-		}
-		r, g, b, a := t.df.GetDarkestColor(t.img, t.x, t.y, t.pxRange)
-		r, g, b = t.modToDarkerColor(r, g, b)
-		colorRGBA.R = r
-		colorRGBA.G = g
-		colorRGBA.B = b
-		colorRGBA.A = a
-
-		t.result.SetRGBA(t.x, t.y, colorRGBA)
-		t.x++
-		if t.x >= t.width {
-			t.x = 0
-			t.y++
-		}
-	}
-}
-
-var cacheDarker = make(map[uint32][3]uint8)
-
-func (t *tresser) modToDarkerColor(r, g, b uint8) (uint8, uint8, uint8) {
-	if c, ok := cacheDarker[uint32(r)<<16|uint32(g)<<8|uint32(b)]; ok {
-		return c[0], c[1], c[2]
-	}
-
-	var h, s, v float64
-	h, s, v = colorconv.RGBToHSV(r, g, b)
-
-	// 赤系の色は色相をマイナス方向に、青系の色はプラス方向にずらす
-	if h < 60.0 || h > 240.0 {
-		h -= 5.0
-		if h < 0.0 {
-			h += 359.9
-		}
-	} else {
-		h += 5.0
-	}
-
-	if s > 0.01 {
-		s = s + (1.0-s)/2.0
-		if s > 0.99 {
-			s = 0.99
-		}
-	}
-
-	v -= t.brightnessReduct
-	if v < 0.0 {
-		v = 0.0
-	}
-
-	nr, ng, nb, err := colorconv.HSVToRGB(h, s, v)
-	if err != nil {
-		log.Printf("failed to convert HSV(%f, %f, %f) to RGB: %v", h, s, v, err)
-		return r, g, b
-	}
-	cacheDarker[uint32(r)<<16|uint32(g)<<8|uint32(b)] = [3]uint8{nr, ng, nb}
-
-	return nr, ng, nb
 }
