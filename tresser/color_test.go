@@ -78,8 +78,6 @@ func TestGetDarkestColorMultiColor(t *testing.T) {
 func TestGetDarkestColorBoundary(t *testing.T) {
 	img := createGradientImage(10, 10)
 	
-	df := newDarkestFinder()
-	
 	testCases := []struct {
 		name     string
 		x, y     int
@@ -92,8 +90,74 @@ func TestGetDarkestColorBoundary(t *testing.T) {
 	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			df := newDarkestFinder()
 			r, _, _, _ := df.GetDarkestColor(img, tc.x, tc.y, tc.rng)
 			assert.Equal(t, tc.expected, r, "期待される暗さと異なります")
+		})
+	}
+}
+
+func TestGetDarkestColorDifferentPositions(t *testing.T) {
+	img := createMultiColorImage(10, 10)
+	
+	txTestCases := []struct {
+		name string
+		tx   int
+		ty   int
+		rng  int
+	}{
+		{"tx=1,ty=5", 1, 5, 3},
+		{"tx=5,ty=5", 5, 5, 3},
+		{"tx=8,ty=5", 8, 5, 3},
+	}
+	
+	for _, tc := range txTestCases {
+		t.Run(tc.name, func(t *testing.T) {
+			df := newDarkestFinder()
+			r, g, b, a := df.GetDarkestColor(img, tc.tx, tc.ty, tc.rng)
+			
+			if tc.tx == 5 && tc.ty == 5 {
+				assert.Equal(t, uint8(50), r, "中央位置での赤色の値が期待通りではありません")
+				assert.Equal(t, uint8(30), g, "中央位置での緑色の値が期待通りではありません")
+				assert.Equal(t, uint8(40), b, "中央位置での青色の値が期待通りではありません")
+			} else {
+				if r == 50 {
+					assert.Equal(t, uint8(30), g, "暗い色の緑色の値が期待通りではありません")
+					assert.Equal(t, uint8(40), b, "暗い色の青色の値が期待通りではありません")
+				} else {
+					assert.Equal(t, uint8(200), r, "明るい色の赤色の値が期待通りではありません")
+					assert.Equal(t, uint8(200), g, "明るい色の緑色の値が期待通りではありません")
+					assert.Equal(t, uint8(200), b, "明るい色の青色の値が期待通りではありません")
+				}
+			}
+			assert.Equal(t, uint8(255), a, "アルファ値が期待通りではありません")
+		})
+	}
+	
+	tyTestCases := []struct {
+		name string
+		tx   int
+		ty   int
+		rng  int
+	}{
+		{"tx=5,ty=1", 5, 1, 3},
+		{"tx=5,ty=8", 5, 8, 3},
+	}
+	
+	for _, tc := range tyTestCases {
+		t.Run(tc.name, func(t *testing.T) {
+			df := newDarkestFinder()
+			r, g, b, a := df.GetDarkestColor(img, tc.tx, tc.ty, tc.rng)
+			
+			if r == 50 {
+				assert.Equal(t, uint8(30), g, "暗い色の緑色の値が期待通りではありません")
+				assert.Equal(t, uint8(40), b, "暗い色の青色の値が期待通りではありません")
+			} else {
+				assert.Equal(t, uint8(200), r, "明るい色の赤色の値が期待通りではありません")
+				assert.Equal(t, uint8(200), g, "明るい色の緑色の値が期待通りではありません")
+				assert.Equal(t, uint8(200), b, "明るい色の青色の値が期待通りではありません")
+			}
+			assert.Equal(t, uint8(255), a, "アルファ値が期待通りではありません")
 		})
 	}
 }
