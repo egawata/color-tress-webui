@@ -36,13 +36,13 @@ func (f imgFormat) String() string {
 }
 
 type dom struct {
-	btnGenerate       js.Value
-	inputImage        js.Value
-	outputImage       js.Value
-	progress          js.Value
-	download          js.Value
-	radius            js.Value
-	brightnessReduct  js.Value
+	btnGenerate      js.Value
+	inputImage       js.Value
+	outputImage      js.Value
+	progress         js.Value
+	download         js.Value
+	radius           js.Value
+	brightnessReduct js.Value
 }
 
 type app struct {

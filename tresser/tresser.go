@@ -10,16 +10,16 @@ import (
 )
 
 type Tresser struct {
-	x, y          int
-	width, height int
-	img           image.Image
-	df            *darkestFinder
-	pxRange       int
+	x, y             int
+	width, height    int
+	img              image.Image
+	df               *darkestFinder
+	pxRange          int
 	brightnessReduct float64
-	result        *image.RGBA
-	timeout       time.Duration
-	completed     bool
-	cacheDarker   map[uint32][3]uint8
+	result           *image.RGBA
+	timeout          time.Duration
+	completed        bool
+	cacheDarker      map[uint32][3]uint8
 }
 
 var resImg *image.RGBA
@@ -33,17 +33,17 @@ func NewTresser(i image.Image, pRange int, brightnessReduct float64) *Tresser {
 	}
 
 	return &Tresser{
-		x:               0,
-		y:               0,
-		width:           w,
-		height:          h,
-		img:             i,
-		pxRange:         pRange,
+		x:                0,
+		y:                0,
+		width:            w,
+		height:           h,
+		img:              i,
+		pxRange:          pRange,
 		brightnessReduct: brightnessReduct,
-		df:              dFinder,
-		timeout:         50 * time.Millisecond,
-		result:          resImg,
-		cacheDarker:     make(map[uint32][3]uint8),
+		df:               dFinder,
+		timeout:          50 * time.Millisecond,
+		result:           resImg,
+		cacheDarker:      make(map[uint32][3]uint8),
 	}
 }
 
@@ -66,7 +66,7 @@ func (t *Tresser) IsCompleted() bool {
 func (t *Tresser) Continue() {
 	start := time.Now()
 	colorRGBA := color.RGBA{0, 0, 0, 255}
-	
+
 	for time.Since(start) < t.timeout {
 		if t.y >= t.height {
 			t.completed = true
